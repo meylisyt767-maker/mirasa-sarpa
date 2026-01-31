@@ -1,0 +1,153 @@
+# mirasa-sarpa
+use firebase create new web-site
+<!DOCTYPE html>
+<html lang="tk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mirasa Sarpa | Sanly Kitaphana</title>
+    <!-- CSS Dizaýny -->
+    <style>
+        :root { --primary: #0b6b3a; --secondary: #c51f2f; --bg: #f4f7f6; --text: #0b3d2e; }
+        body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); }
+        header { background: var(--primary); color: white; padding: 20px; text-align: center; font-size: 24px; font-weight: bold; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .container { padding: 20px; max-width: 600px; margin: auto; }
+       
+        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; outline: none; }
+        input:focus { border-color: var(--primary); box-shadow: 0 0 5px rgba(11, 107, 58, 0.3); }
+       
+        .form-section { background: white; padding: 20px; border-radius: 12px; margin-top: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #eee; }
+        button { width: 100%; padding: 14px; background: var(--secondary); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 16px; }
+       
+        .book-card { background: white; padding: 15px; border-radius: 10px; margin-bottom: 15px; border-left: 5px solid var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.05); animation: fadeIn 0.4s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+       
+        .book-card h3 { margin: 0 0 5px 0; font-size: 18px; color: var(--primary); }
+        .book-card p { margin: 0 0 10px 0; font-size: 14px; color: #666; }
+        .download-btn { display: inline-block; padding: 8px 16px; background: #e8f5e9; color: var(--primary); text-decoration: none; border-radius: 5px; font-weight: 500; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<header>📚 Mirasa Sarpa</header>
+
+<div class="container">
+    <!-- Gözleg meýdançasy -->
+    <input type="text" id="searchInput" placeholder="Kitap ýa-da awtor gözle...">
+
+    <!-- Kitaplar sanawy -->
+    <div id="booksList">
+        <p style="text-align: center; color: #888;">Kitaplar ýüklenýär...</p>
+    </div>
+
+    <!-- Goşmak formasy -->
+    <div class="form-section">
+        <h3 style="margin-top:0;">➕ Täze Kitap Goş</h3>
+        <input type="text" id="title" placeholder="Kitabyň ady">
+        <input type="text" id="author" placeholder="Awtor">
+        <input type="text" id="link" placeholder="PDF link (https://...)">
+        <button id="addBtn">Kitaby Sanawa Goş</button>
+    </div>
+</div>
+
+<!-- Firebase SDK-lar (Hökman şu tertipde we iň soňky orunda) -->
+<script src="https://www.gstatic.com"></script>
+<script src="https://www.gstatic.com"></script>
+
+<!-- JavaScript kody -->
+<script>
+    // Firebase Konfigurasiýasy
+    const firebaseConfig = {
+        apiKey: "AIzaSyC1y1mosGq0g89vvRV_QxDs0knQSnpqGOY",
+        authDomain: "mirasa-sarpa.firebaseapp.com",
+        projectId: "mirasa-sarpa",
+        storageBucket: "mirasa-sarpa.appspot.com",
+        messagingSenderId: "833031284053",
+        appId: "1:833031284053:web:5b53cfed6273d7adf33bdc"
+    };
+
+    // Firebase-iň ýüklendigini barlap başlatmak
+    document.addEventListener("DOMContentLoaded", function() {
+        if (typeof firebase !== "undefined") {
+            firebase.initializeApp(firebaseConfig);
+            const db = firebase.firestore();
+
+            const booksList = document.getElementById("booksList");
+            const searchInput = document.getElementById("searchInput");
+            const addBtn = document.getElementById("addBtn");
+
+            // Kitaplary Realtime Okamak
+            db.collection("books").orderBy("createdAt", "desc").onSnapshot((snapshot) => {
+                booksList.innerHTML = "";
+               
+                if (snapshot.empty) {
+                    booksList.innerHTML = "<p style='text-align:center;'>Sanaw boş.</p>";
+                    return;
+                }
+
+                snapshot.forEach((doc) => {
+                    const book = doc.data();
+                    const div = document.createElement("div");
+                    div.className = "book-card";
+                    div.innerHTML = `
+                        <h3>${book.title}</h3>
+                        <p>✍️ ${book.author}</p>
+                        <a href="${book.link}" target="_blank" class="download-btn">📖 Oka / Ýükle</a>
+                    `;
+                    booksList.appendChild(div);
+                });
+            }, (error) => {
+                booksList.innerHTML = "<p style='color:red; text-align:center;'>Maglumatlary alyp bolmady. Firestore Rules ýapyk!</p>";
+                console.error("Hata:", error);
+            });
+
+            // Täze Kitap Goşmak
+            addBtn.onclick = function() {
+                const title = document.getElementById("title").value.trim();
+                const author = document.getElementById("author").value.trim();
+                let link = document.getElementById("link").value.trim();
+
+                if (!title || !author || !link) {
+                    alert("Ähli öýjükleri dolduryň!");
+                    return;
+                }
+
+                if (!link.startsWith("http")) link = "https://" + link;
+
+                addBtn.disabled = true;
+                addBtn.innerText = "Goşulýar...";
+
+                db.collection("books").add({
+                    title: title,
+                    author: author,
+                    link: link,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                }).then(() => {
+                    alert("Kitap goşuldy!");
+                    document.getElementById("title").value = "";
+                    document.getElementById("author").value = "";
+                    document.getElementById("link").value = "";
+                }).catch((e) => alert("Hata: " + e.message))
+                .finally(() => {
+                    addBtn.disabled = false;
+                    addBtn.innerText = "Kitaby Sanawa Goş";
+                });
+            };
+
+            // Canly Gözleg (Live Search)
+            searchInput.oninput = function() {
+                const term = searchInput.value.toLowerCase();
+                const cards = document.querySelectorAll(".book-card");
+                cards.forEach(card => {
+                    card.style.display = card.innerText.toLowerCase().includes(term) ? "block" : "none";
+                });
+            };
+
+        } else {
+            alert("Firebase ýüklenip bilmedi! Internetiňizi barlan.");
+        }
+    });
+</script>
+
+</body>
+</html>
